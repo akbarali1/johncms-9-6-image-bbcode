@@ -16,6 +16,7 @@ declare(strict_types=1);
 
 namespace Image\Controllers;
 
+use Image\Install\ImageDatabaseInstall;
 use Image\Models\ImageBBCodeModel;
 use Image\Services\ImageService;
 use Johncms\Controller\BaseController;
@@ -42,8 +43,19 @@ class ImageController extends BaseController
         $user = di(User::class);
         // If the guest is closed, display a message and close access (except for Admins)
         if (! $user->is_valid) {
-            die(__('Only for registered'));
+            http_response_code(403);
+            echo $this->render->render(
+                'system::pages/result',
+                [
+                    'title'    => __('Только для зарегистрированных'),
+                    'message'  => __('Только для зарегистрированных'),
+                    'type'     => 'alert-danger',
+                    'back_url' => '/',
+                ]
+            );
+            exit;
         }
+        ImageDatabaseInstall::install();
     }
 
     public function index(ImageService $service): string
