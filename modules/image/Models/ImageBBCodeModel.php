@@ -22,13 +22,14 @@ use Johncms\Users\User;
 
 class ImageBBCodeModel extends Model
 {
-    protected $table = 'image_bbcode_akbarali';
+    protected $table = 'bbcode_akbarali';
 
     public $timestamps = false;
 
     protected $fillable = [
         'user_id',
         'name',
+        'type',
         'created_at',
     ];
 

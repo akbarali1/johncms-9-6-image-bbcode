@@ -10,9 +10,10 @@
 
 declare(strict_types=1);
 
-namespace Image\Resources;
+namespace Guestbook\Resources;
 
 use Guestbook\Models\Guestbook;
+use Image\Controllers\ImageController;
 use Johncms\Users\User;
 
 /**
@@ -25,16 +26,21 @@ class PostResource extends BaseResource
 {
     public function toArray(): array
     {
-        $file_path = ($this->model->type == 'audio') ? '/upload/audio_akb/' . $this->model->name : '/upload/images_akb/' . $this->model->name;
         return [
-            'id'         => $this->model->id,
-            'name'       => $this->model->name,
-            'file_path'  => $file_path,
-            'created_at' => $this->model->created_at,
-            'type'       => $this->model->type,
-            'user_id'    => $this->model->user_id,
-            'user'       => $this->getUser(),
-//            'meta'         => $this->getMeta(),
+            'id'           => $this->model->id,
+            'name'         => $this->model->name,
+            'is_online'    => $this->model->is_online,
+            'created_at'   => $this->model->time,
+            'edit_count'   => $this->model->edit_count,
+            'edited_by'    => $this->model->edit_who,
+            'edited_at'    => $this->model->edit_time,
+            'text'         => ImageController::bbcode($this->model->post_text),
+            'reply_text'   => $this->model->reply_text,
+            'reply_author' => $this->model->admin,
+            'replied_at'   => $this->model->otime,
+            'user_id'      => $this->model->user_id,
+            'user'         => $this->getUser(),
+            'meta'         => $this->getMeta(),
         ];
     }
 
@@ -44,7 +50,6 @@ class PostResource extends BaseResource
         if ($user_model !== null) {
             $user = [
                 'id'          => $user_model->id,
-                'name'        => $user_model->name,
                 'profile_url' => $user_model->profile_url,
                 'rights_name' => $user_model->rights_name,
                 'rights'      => $user_model->rights,

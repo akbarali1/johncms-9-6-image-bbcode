@@ -34,6 +34,7 @@ class ImageController extends BaseController
 
     /** @var string */
     protected $base_url = '/image/';
+    const VERSION = 'Akbarali BBCODE VERSION 3.1';
 
     public function __construct()
     {
@@ -60,7 +61,9 @@ class ImageController extends BaseController
 
     public function index(ImageService $service): string
     {
-        $this->render->addData(['title' => "salom", 'page_title' => "salom"]);
+        self::versionBBcode();
+
+        $this->render->addData(['title' => "BBCode Akbrali", 'page_title' => "BBCode Akbrali"]);
 
         $user = di(User::class);
 
@@ -81,10 +84,11 @@ class ImageController extends BaseController
         $files = $request->getUploadedFiles();
         $image_info = [];
         foreach ($files['image'] as $item) {
-            $image_name = $this->saveImage($item, $user->id);
+            $image_name = $this->saveFile($item, $user->id);
+            $file_path = ($image_name['type'] == 'audio') ? '/upload/audio_akb/' : '/upload/images_akb/';
             $image_info[] = [
-                'data'       => $image_name,
-                'image_path' => '/upload/images_akb/' . $image_name['name'],
+                'data'      => $image_name,
+                'file_path' => $file_path . $image_name['name'],
             ];
         }
         return json_encode(
@@ -95,32 +99,53 @@ class ImageController extends BaseController
         );
     }
 
-    public function saveImage($item, $user_id)
+    public function saveFile($item, $user_id)
     {
         $file_info = new FileInfo($item->getClientFilename());
-        if ($file_info->isImage()) {
-            $filename = $user_id . '-' . time() . '-' . rand(0, 99999) . '.png';
-            $folder = UPLOAD_PATH . 'images_akb/';
-            if (! file_exists($folder)) {
-                mkdir($folder, 0777, true);
-            }
-            $item->moveTo($folder . $filename);
-            if (! $item->isMoved()) {
-                die(json_encode(['error' => 'Ошибка при загрузке файла']));
-            } else {
-                return $this->saveDataBase($filename, $user_id);
-            }
+        $file_type = $file_info->getExtension();
+        $filename = $user_id . '-' . time() . '-' . rand(0, 99999) . '.' . $file_type;
+        $audio_extensions = ['mp3', 'wav', 'ogg'];
+        $folder = $this->fileCheck($item, $audio_extensions);
+
+        if (! file_exists($folder)) {
+            mkdir($folder, 0777, true);
+        }
+        $item->moveTo($folder . $filename);
+
+        if (! $item->isMoved()) {
+            die(json_encode(['error' => 'Ошибка при загрузке файла']));
         } else {
-            die(json_encode(['error' => 'Разрешены только фото']));
+            $file_type = (in_array($file_type, $audio_extensions)) ? 'audio' : 'image';
+            return $this->saveDataBase($filename, $user_id, $file_type);
         }
     }
 
-    protected function saveDataBase($name, $user_id)
+    public function fileCheck($item, $audio_extensions)
+    {
+        $file_info = new FileInfo($item->getClientFilename());
+        $file_type = $file_info->getExtension();
+        $file_size = $item->getSize();
+        if ($file_size > 2097152) {
+            die(json_encode(['error' => true, 'message' => 'Размер файла превышает 2 Мб',]));
+        }
+
+        if ($file_info->isImage()) {
+            $folder = UPLOAD_PATH . 'images_akb/';
+        } elseif (in_array($file_type, $audio_extensions)) {
+            $folder = UPLOAD_PATH . 'audio_akb/';
+        } else {
+            die(json_encode(['error' => true, 'message' => 'Недопустимый тип файла']));
+        }
+        return $folder;
+    }
+
+    protected function saveDataBase($name, $user_id, $type)
     {
         $response = (new ImageBBCodeModel())->create(
             [
                 'name'    => $name,
                 'user_id' => $user_id,
+                'type'    => $type,
             ]
         );
 
@@ -139,14 +164,22 @@ class ImageController extends BaseController
 
     public static function bbcode($content)
     {
+        self::versionBBcode();
         $search = [
             '/\[img\](.*?)\[\/img\]/is',
+            '/\[audio\](.*?)\[\/audio\]/is',
         ];
 
         $replace = [
-            '<img class="" src="../upload/images_akb/$1" alt="*" style=" max-width: 100%; ">',
+            '<img class="" src="/upload/images_akb/$1" alt="*" style=" max-width: 100%; ">',
+            '<audio controls src="/upload/audio_akb/$1"> Your browser does not support the audio element. </audio>',
         ];
 
         return preg_replace($search, $replace, $content);
+    }
+
+    public static function versionBBcode()
+    {
+        header('VERSION_BBCODE: ' . self::VERSION);
     }
 }

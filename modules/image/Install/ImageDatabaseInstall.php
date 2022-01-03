@@ -25,13 +25,14 @@ class ImageDatabaseInstall
     public static function install()
     {
         $schema = Capsule::Schema();
-        if (! $schema->hasTable('image_bbcode_akbarali')) {
+        if (! $schema->hasTable('bbcode_akbarali')) {
             $schema->create(
-                'image_bbcode_akbarali',
+                'bbcode_akbarali',
                 static function (Blueprint $table) {
                     $table->increments('id');
                     $table->integer('user_id');
                     $table->string('name', 255);
+                    $table->string('type', 255);
                     $table->dateTime('created_at')->default(Capsule::raw('CURRENT_TIMESTAMP'));
                 }
             );
